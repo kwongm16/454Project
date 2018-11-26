@@ -16,8 +16,7 @@ for row in cell_range.values:
         print(value) 
         
 
-<<<<<<< HEAD
-print('hello michael')
+
 
 =======
 print('hello trinh')
