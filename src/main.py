@@ -4,7 +4,11 @@ Created on Nov 24, 2018
 @author: micha
 '''
 #Importing data from "Line_Data.xlsx" excel document
-from openpyxl import load_workbook
+import openpyxl
+import numpy as np
+import math
+import cmath
+
 dataFile = load_workbook('Line_Data.xlsx')
 
 #Making each sheet of data (Line & Load data) more accessable
