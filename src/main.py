@@ -3,26 +3,20 @@ Created on Nov 24, 2018
 
 @author: micha
 '''
-#Importing Data from Line & Load Excel files
-import openpyxl
-import numpy as np
-import math
-import cmath
-
+#Importing data from "Line_Data.xlsx" excel document
 from openpyxl import load_workbook
-lineDataFile = load_workbook(filename = 'Line_Data.xlsx')
-loadDataFile = load_workbook(filename = 'Load_Data.xlsx')
+dataFile = load_workbook('Line_Data.xlsx')
 
-#Testing printing features
-ws = lineDataFile.active
-cell_range = ws['A3':'E19'] 
-for row in cell_range.values: 
-    for value in row: 
-        print(value) 
-        
+#Making each sheet of data (Line & Load data) more accessable
+dataFile.sheetnames
+lineData = dataFile['Line Data'] 
+loadData = dataFile['Load Data'] 
 
+print(lineData.max_row) 
+print(loadData.max_row) 
 
 
-=======
-print('hello trinh')
->>>>>>> branch 'master' of https://github.com/kwongm16/454Project.git
+
+
+
+
