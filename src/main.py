@@ -9,17 +9,15 @@ import numpy as np
 import math
 import cmath
 
-dataFile = load_workbook('Line_Data.xlsx')
+workbook = openpyxl.load_workbook('454 Data.xlsx') 
 
 #Making each sheet of data (Line & Load data) more accessable
-dataFile.sheetnames
-lineData = dataFile['Line Data'] 
-loadData = dataFile['Load Data'] 
+workbook.sheetnames
+lineData = workbook['Line Data'] 
+loadData = workbook['Load Data'] 
 
 print(lineData.max_row) 
 print(loadData.max_row) 
-
-hhiu
 
 
 
