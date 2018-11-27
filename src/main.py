@@ -24,7 +24,15 @@ Pgen = []
 V = [] 
 busType = [] 
 
-for row_index in range(1, (busData.max_row+1)): 
+#Putting BusData into arrays where there is nested 
+#forloop to go row by row, and column by column 
+#when counter = 1 put into P array 
+#             = 2          Q array 
+#             = 3          Pgen array 
+#             = 4          V array 
+#             = 5          busType array 
+# reset to 1 when counter = 6 
+for row_index in range(1, (busData.max_row + 1)): 
     print ("Row:", row_index)
     counter = 1 
     for col_index in range(1, (busData.max_column+1)): 
@@ -43,6 +51,7 @@ for row_index in range(1, (busData.max_row+1)):
         
         print ("Column:" , col_index, busData.cell(row=row_index, column=col_index).value)
         counter = counter + 1 
+        
 print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 for row_index in range(1, (lineData.max_row+1)): 
