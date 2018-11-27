@@ -20,13 +20,15 @@ for row_index in range(1, (busData.max_row+1)):
     for col_index in range(1, (busData.max_column+1)): 
         print ("Column:" , col_index, busData.cell(row=row_index, column=col_index).value)
 
-print(busData.max_row) 
-print(busData.max_column)
+print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
-print(lineData.max_row) 
-print(lineData.max_column)
+for row_index in range(1, (lineData.max_row+1)): 
+    print ("Row:", row_index)
+    for col_index in range(1, (lineData.max_column+1)): 
+        print ("Column:" , col_index, lineData.cell(row=row_index, column=col_index).value)
 
-print(lineData.cell(row = 2, column = 4).value)
+
+
 
 
 
