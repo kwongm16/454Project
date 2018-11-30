@@ -31,36 +31,42 @@ busType = []
 #             = 3          Pgen array 
 #             = 4          V array 
 #             = 5          busType array 
-# reset to 1 when counter = 6 
-for row_index in range(1, (busData.max_row + 1)): 
-    print ("Row:", row_index)
-    counter = 1 
-    for col_index in range(1, (busData.max_column+1)): 
-        if counter == 1: 
-            P.append(busData.cell(row=row_index + 1, column=col_index + 1).value)
-        elif counter == 2: 
-            Q.append(busData.cell(row=row_index + 1, column=col_index + 1).value)
-        elif counter == 3: 
-            Pgen.append(busData.cell(row=row_index + 1, column=col_index + 1).value)
-        elif counter == 4: 
-            V.append(busData.cell(row=row_index + 1, column=col_index + 1).value)
-        elif counter == 5: 
-            busType.append(busData.cell(row=row_index + 1, column=col_index + 1).value)
-        else : 
-            counter = 1
-        
-        print ("Column:" , col_index, busData.cell(row=row_index, column=col_index).value)
-        counter = counter + 1 
-        
+for row_index in range(1, (busData.max_row)): 
+    P.append(busData.cell(row=row_index + 1, column=2).value)
+    Q.append(busData.cell(row=row_index + 1, column=3).value)
+    Pgen.append(busData.cell(row=row_index + 1, column=4).value)
+    V.append(busData.cell(row=row_index + 1, column=5).value)
+    busType.append(busData.cell(row=row_index + 1, column=6).value)
+print('P:',P)
+print('Q:',Q) 
+print('Pgen:', Pgen)
+print('V:', V)
+print('busType:', busType)
+
+print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+#Initializing Y-Admittitance matrix where the size is based on the 
+#number of buses in the grid
+numberOfBuses = 13
+yAdmittance = np.zeros(shape=(numberOfBuses, numberOfBuses), dtype=complex)
+print(yAdmittance)
 print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
-for row_index in range(1, (lineData.max_row+1)): 
-    print ("Row:", row_index)
-    for col_index in range(1, (lineData.max_column+1)): 
-        print ("Column:" , col_index, lineData.cell(row=row_index, column=col_index).value)
+for row_index in range (0, (busData.max_row - 1)): 
+    
+    sendIndex = lineData.cell(row=row_index + 2, column=1).value
+    receiveIndex = lineData.cell(row_index + 2, column=2).value
+    
+    rTotal = lineData.cell(row_index + 2, column=3).value
+    xTotal = lineData.cell(row_index + 2, column=4).value
+    bTotal = lineData.cell(row_index + 2, column=5).value
+    seriesImpedance = complex(rTotal, xTotal)
+    
+    yAdmittance[sendIndex - 1, receiveIndex - 1] = -1*(1 / seriesImpedance)
+    yAdmittance[receiveIndex - 1, sendIndex - 1] = -1*(1 / seriesImpedance)
+    
+    yAdmittance[sendIndex - 1, sendIndex - 1] = yAdmittance[sendIndex - 1, sendIndex - 1] + (1 / seriesImpedance) + (1j * bTotal / 2)
+    yAdmittance[receiveIndex - 1, receiveIndex - 1] = yAdmittance[sendIndex - 1, sendIndex - 1] = yAdmittance[sendIndex - 1, sendIndex - 1] + (1 / seriesImpedance) + (1j * bTotal / 2)
 
-
-
-
-
-
+print(yAdmittance)
+a = np.asarray(yAdmittance)
+np.savetxt("foo.csv", a, delimiter=",")
