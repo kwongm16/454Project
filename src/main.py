@@ -1,7 +1,7 @@
 '''
 Created on Nov 24, 2018
 
-@author: micha
+@author: micha and trinh
 '''
 #Importing packages used
 import openpyxl
