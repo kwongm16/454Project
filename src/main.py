@@ -33,10 +33,11 @@ busType = []
 #             = 3          Pgen array 
 #             = 4          V array 
 #             = 5          busType array 
+MVAbase = 100 
 for row_index in range(1, (busData.max_row)): 
-    P.append(busData.cell(row=row_index + 1, column=2).value)
-    Q.append(busData.cell(row=row_index + 1, column=3).value)
-    Pgen.append(busData.cell(row=row_index + 1, column=4).value)
+    P.append(busData.cell(row=row_index + 1, column=2).value / MVAbase)
+    Q.append(busData.cell(row=row_index + 1, column=3).value / MVAbase)
+    Pgen.append(busData.cell(row=row_index + 1, column=4).value / MVAbase)
     V.append(busData.cell(row=row_index + 1, column=5).value)
     busType.append(busData.cell(row=row_index + 1, column=6).value)
 print('P:',P)
@@ -48,12 +49,12 @@ print('busType:', busType)
 print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 #Initializing Y-Admittitance matrix where the size is based on the 
 #number of buses in the grid
-numberOfBuses = 13
+numberOfBuses = 12
 yAdmittance = np.zeros(shape=(numberOfBuses, numberOfBuses), dtype=complex)
 print(yAdmittance)
 print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
-for row_index in range (0, (busData.max_row - 1)): 
+for row_index in range (0, (lineData.max_row - 1)): 
     
     sendIndex = lineData.cell(row=row_index + 2, column=1).value
     receiveIndex = lineData.cell(row_index + 2, column=2).value
