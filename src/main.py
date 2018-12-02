@@ -11,6 +11,8 @@ import cmath
 
 #Importing data from "Line_Data.xlsx" excel document
 workbook = openpyxl.load_workbook('454 Data.xlsx') 
+print(workbook)
+
 
 #Making each sheet of data (Line & Load data) more accessable
 lineData = workbook['LineData'] 
@@ -64,9 +66,23 @@ for row_index in range (0, (busData.max_row - 1)):
     yAdmittance[sendIndex - 1, receiveIndex - 1] = -1*(1 / seriesImpedance)
     yAdmittance[receiveIndex - 1, sendIndex - 1] = -1*(1 / seriesImpedance)
     
-    yAdmittance[sendIndex - 1, sendIndex - 1] = yAdmittance[sendIndex - 1, sendIndex - 1] + (1 / seriesImpedance) + (1j * bTotal / 2)
-    yAdmittance[receiveIndex - 1, receiveIndex - 1] = yAdmittance[sendIndex - 1, sendIndex - 1] = yAdmittance[sendIndex - 1, sendIndex - 1] + (1 / seriesImpedance) + (1j * bTotal / 2)
+    yAdmittance[sendIndex - 1, sendIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
+    yAdmittance[receiveIndex - 1, receiveIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
 
 print(yAdmittance)
 a = np.asarray(yAdmittance)
 np.savetxt("foo.csv", a, delimiter=",")
+
+print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+#Convergence requirements
+Pconv = 0.1
+Qconv = 0.1
+
+for idx in range(0,len(busType)):
+    if busType[idx] == "S":
+        print("S")
+    elif busType[idx] == "PV":
+        print("PV")
+    elif busType[idx] == "PQ":
+        P_inj = Pgen[idx] - P[idx]
+        print(P_inj)
