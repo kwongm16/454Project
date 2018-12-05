@@ -65,9 +65,9 @@ for row_index in range (0, (lineData.max_row - 1)):
     yBus[sendIndex - 1, sendIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
     yBus[receiveIndex - 1, receiveIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
 
-# print(yBus)
-# a = np.asarray(yBus)
-# np.savetxt("foo.csv", a, delimiter=",")
+print(yBus)
+a = np.asarray(yBus)
+np.savetxt("foo.csv", a, delimiter=",")
 
 # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
@@ -94,20 +94,13 @@ for idx in range(0,len(busType)):
     if busType[idx] == "PQ":
         inj.append(-1*Qload[idx])
 
-#Create flat start matrix
-#Fill in with known voltages and thetas
-#For all unknowns, guess voltage = 1 and theta = 0
-#Matrix is arranged as follows: [theta 1 .... theta N voltage 1 .... voltage N]
-flatStart = np.zeros(shape = (2*numBuses), dtype = complex)
-for idx in range(0,numBuses):
-    if busType[idx] == "S" or busType[idx] == "PV":
-        flatStart[numBuses + idx] = V[idx]
+#fill unknown V's with flat start guesses
+for idx in range(0, numBuses):
+    if busType[idx] =="PQ":
+        V[idx] = 1
 
-    elif busType[idx] == "PQ":
-            flatStart[numBuses + idx] = 1
-
-print(inj)
-print(flatStart)
+#intialize a theta array with knowns and flat start guesses
+theta = np.zeros(numBuses)
 
 #Mismatch equations
 deltaP = np.zeros(shape = (numBuses - 1), dtype = complex)
@@ -115,3 +108,24 @@ deltaQ = np.zeros(shape = (numPQ), dtype = complex)
 
 #Consider creating a theta matrix, in which all values are initially 0
 #Consider modifying the V matrix, in which all zero values are 1
+
+def J11(numBuses, numPQ):
+    J11 = np.zeros(shape = (numBuses-1, numBuses-1))
+
+    for j in range(0,numBuses-1):
+        for k in range (0,numBuses-1):
+
+            J11[j][k] = V[j+1] * V[k+1] *(np.real(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]))
+
+    return J11
+
+def J12(numBuses, numPQ):
+    J12 = np.zeros(shape = (numBuses-1, numPQ), dtype = complex)
+
+    
+    return J12
+
+print(J11(numBuses, numPQ).shape)
+# a = J11(numBuses, numPQ)
+# np.savetxt("foo.csv", a, delimiter=",")
+print(np.imag(yBus[2][2]))
