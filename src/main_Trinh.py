@@ -65,9 +65,9 @@ for row_index in range (0, (lineData.max_row - 1)):
     yBus[sendIndex - 1, sendIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
     yBus[receiveIndex - 1, receiveIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
 
-print(yBus)
-a = np.asarray(yBus)
-np.savetxt("foo.csv", a, delimiter=",")
+# print(yBus)
+# a = np.asarray(yBus)
+# np.savetxt("foo.csv", a, delimiter=",")
 
 # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
@@ -103,13 +103,26 @@ for idx in range(0, numBuses):
 theta = np.zeros(numBuses)
 
 #Mismatch equations
-deltaP = np.zeros(shape = (numBuses - 1), dtype = complex)
+# deltaP = np.zeros(shape = (numBuses - 1), dtype = complex)
+
+def deltaP(numBuses):
+    deltaP = np.zeros(numBuses-1)
+
+    for j in range(0, numBuses - 1):
+
+        for k in range(0, numBuses - 1):
+
+            deltaP[j] += V[j+1] * V[k+1] * (np.real(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]))
+
+        deltaP[j] += inj[j+1]
+
+    return deltaP
+print(deltaP(numBuses))
+
 deltaQ = np.zeros(shape = (numPQ), dtype = complex)
 
-#Consider creating a theta matrix, in which all values are initially 0
-#Consider modifying the V matrix, in which all zero values are 1
-
-def J11(numBuses, numPQ):
+#Define Jacobian submatrices
+def J11(numBuses):
     J11 = np.zeros(shape = (numBuses-1, numBuses-1))
 
     for j in range(0,numBuses-1):
@@ -120,12 +133,29 @@ def J11(numBuses, numPQ):
     return J11
 
 def J12(numBuses, numPQ):
-    J12 = np.zeros(shape = (numBuses-1, numPQ), dtype = complex)
+    J12 = np.zeros(shape = (numBuses-1, numPQ))
+    pqIdx = [4,5,6,7,8,9,11]
+    for j in range(0,numBuses-1):
+        for k in range (0,numPQ):
 
-    
+            J12[j][k] = V[j+1] *(np.real(yBus[j+1][pqIdx[k]-1])*np.cos(theta[j+1]-theta[pqIdx[k]-1]) + np.imag(yBus[j+1][pqIdx[k]-1])*np.sin(theta[j+1]-theta[pqIdx[k]-1]))
+
     return J12
 
-print(J11(numBuses, numPQ).shape)
-# a = J11(numBuses, numPQ)
-# np.savetxt("foo.csv", a, delimiter=",")
-print(np.imag(yBus[2][2]))
+def J21(numBuses, numPQ):
+    J21 = np.zeros(shape = (numPQ, numBuses - 1))
+    pqIdx = [4,5,6,7,8,9,11]
+
+
+
+    for j in range(0,numPQ):
+        for k in range (0,numBuses - 1):
+
+            J21[j][k] = V[pqIdx[j]]*V[k] *(np.real(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]) + np.imag(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]))
+
+    return J21
+
+print(J12(12,7))
+
+a = np.asarray(J12(12,7))
+np.savetxt("foo.csv", a, delimiter=",")
