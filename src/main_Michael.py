@@ -249,30 +249,34 @@ def J22():
     return J22
 
 def checkConverge(deltaP, deltaQ):
-    convergence = 1 
     for p in range(0, len(deltaP)): 
         if deltaP[p] > Pconv: 
             return False;
-    if convergence == 1: 
-        for q in range(0, len(deltaQ)): 
-            if deltaQ[q] > Qconv: 
-                return False;
-        if convergence == 1: 
-            return True; 
-    return False;
+    for q in range(0, len(deltaQ)): 
+        if deltaQ[q] > Qconv: 
+            return False;
+    return True;
 
 print(J22())
 print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 print(Qcomp)
-def update(Vdiff, Thetadiff):
+
+def update(correction):
     global V
     global theta 
+    
+    for ind in range(0, len(correction)): 
+        if ind < len(theta): 
+            theta[ind] += correction[ind][0]
+        else: 
+            V[ind] += correction[ind][0]
     return;
 
-jacobian = np.full((18,18), 1)
-jacobian = np.linalg.inv(-jacobian)
-print(jacobian)  
+def calcCorrection(jacobian, mismatch):
+    invJacobian = np.linalg.inv(-jacobian)
+    correction = np.linalg.solve(invJacobian, mismatch)
+    return correction;
 
 # a = J11(numBuses, numPQ)
 # np.savetxt("foo.csv", a, delimiter=",")

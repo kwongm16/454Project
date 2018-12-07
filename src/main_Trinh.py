@@ -10,7 +10,7 @@ import math
 import cmath
 
 #Importing data from "Line_Data.xlsx" excel document
-workbook = openpyxl.load_workbook('454 Data.xlsx') 
+workbook = openpyxl.load_workbook('454 Data Project.xlsx') 
 
 MVAbase = 100
 
@@ -65,9 +65,9 @@ for row_index in range (0, (lineData.max_row - 1)):
     yBus[sendIndex - 1, sendIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
     yBus[receiveIndex - 1, receiveIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
 
-print(yBus)
-a = np.asarray(yBus)
-np.savetxt("foo.csv", a, delimiter=",")
+#print(yBus)
+#a = np.asarray(yBus)
+#np.savetxt("foo.csv", a, delimiter=",")
 
 # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
@@ -107,7 +107,9 @@ def pqIdx():
     return pqIdx
 
 pqIdx = pqIdx()
+
 print(pqIdx)
+print("~~~~~~~~~~~~~~~~~~~~~~~")
 
 #Function for P computed
 def Pcomp(j):
@@ -191,8 +193,6 @@ def J22():
                                        (np.imag(yBus[kprime1-1][kprime2-1])*np.cos(theta[kprime1-1]-theta[kprime2-1]))) 
     return J22
 
-
-
 def J():
     J1 = np.vstack((J11(),J21()))
     J2 = np.vstack((J12(),J22()))
@@ -200,7 +200,27 @@ def J():
 
     return J
 
-print(J())
+jacobian = J()
+print("~~~~~~~~~~~~~~~~~~~~~~~")
+P = deltaP()
+Q = deltaQ()
+
+dP = P.reshape(len(P),1)
+dQ = Q.reshape(len(Q),1)
+print("~~~~~~~~~~~~~~~~~~~~~~~")
+print(dP)
+print("~~~~~~~~~~~~~~~~~~~~~~~")
+print(dQ)
+print("Here")
+mismatch = np.vstack((dP,dQ))
+
+def calcCorrection(jacobian, mismatch):
+    invJacobian = np.linalg.inv(-jacobian)
+    correction = np.linalg.solve(invJacobian, mismatch)
+    return correction;
+
+print(calcCorrection(jacobian, mismatch))
+
 np.savetxt("Jacobian.csv", J(), delimiter=",")
 
 b = np.asarray(deltaP())
@@ -220,6 +240,7 @@ np.savetxt("J21.csv", f, delimiter=",")
 
 g = np.asarray(J22())
 np.savetxt("J22.csv", g, delimiter=",")
+
 
 
 #Calculate mismatch = [deltaP deltaQ]
