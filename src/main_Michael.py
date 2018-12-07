@@ -277,6 +277,16 @@ def calcCorrection(jacobian, mismatch):
     invJacobian = np.linalg.inv(-jacobian)
     correction = np.linalg.solve(invJacobian, mismatch)
     return correction;
+j = np.matrix('1 1; 9 4')
+f = np.matrix('-2;-14')
+#print(j)
+#print(f)
+invj = np.linalg.inv(-j)
+corr = np.matmul(invj, f)
+print(invj)
+print(corr)
+
+
 
 # a = J11(numBuses, numPQ)
 # np.savetxt("foo.csv", a, delimiter=",")

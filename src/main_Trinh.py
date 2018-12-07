@@ -6,8 +6,6 @@ Created on Nov 24, 2018
 #Importing packages used
 import openpyxl
 import numpy as np
-import math
-import cmath
 
 #Importing data from "Line_Data.xlsx" excel document
 workbook = openpyxl.load_workbook('454 Data Project.xlsx') 
@@ -108,9 +106,6 @@ def pqIdx():
 
 pqIdx = pqIdx()
 
-print(pqIdx)
-print("~~~~~~~~~~~~~~~~~~~~~~~")
-
 #Function for P computed
 def Pcomp(j):
     Pcomp = 0
@@ -200,26 +195,67 @@ def J():
 
     return J
 
-jacobian = J()
-print("~~~~~~~~~~~~~~~~~~~~~~~")
-P = deltaP()
-Q = deltaQ()
-
-dP = P.reshape(len(P),1)
-dQ = Q.reshape(len(Q),1)
-print("~~~~~~~~~~~~~~~~~~~~~~~")
-print(dP)
-print("~~~~~~~~~~~~~~~~~~~~~~~")
-print(dQ)
-print("Here")
-mismatch = np.vstack((dP,dQ))
+def checkConverge(deltaP, deltaQ):
+    for p in range(0, len(deltaP)): 
+        if deltaP[p] > Pconv: 
+            print(p)
+            return False;
+    for q in range(0, len(deltaQ)): 
+        if deltaQ[q] > Qconv: 
+            return False;
+    return True;
 
 def calcCorrection(jacobian, mismatch):
-    invJacobian = np.linalg.inv(-jacobian)
-    correction = np.linalg.solve(invJacobian, mismatch)
+    invJacobian = np.linalg.inv(jacobian)
+    correction = np.matmul(-invJacobian, mismatch)
     return correction;
 
-print(calcCorrection(jacobian, mismatch))
+
+def update(correction, numPQ):
+    global V
+    global theta 
+    
+    for thetaInd in range(0, len(correction) - numPQ): 
+        theta[thetaInd+1] += correction[thetaInd][0]
+    
+    for vInd in range(0, numPQ):
+        kprime = pqIdx[vInd]-1 
+        V[kprime] += correction[len(theta)-1+vInd][0]
+    return;
+
+if __name__ == '__main__': 
+    jacobian = J()
+    
+    P = deltaP()
+    Q = deltaQ()
+    
+    dP = P.reshape(len(P),1)
+    dQ = Q.reshape(len(Q),1)
+    
+    mismatch = np.vstack((dP,dQ))
+    
+    correction = calcCorrection(jacobian, mismatch)
+    
+    #print("correction:", correction)
+    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+    print("dP", deltaP())
+    print("dQ", deltaQ())
+    #print("V:", V)
+    #print("theta:", theta)
+    #print("V length:", len(V))
+    #print("theta length:", len(theta))
+    #print("correction length:", len(correction))
+    update(correction, numPQ)
+    #print("numPQ", numPQ)
+    #print("correction - numPQ", len(correction)-numPQ)
+    #print("newV:", V)
+    #print("newtheta", theta)
+    print("newdP", deltaP())
+    print("newdQ", deltaQ())
+    print(checkConverge(deltaP(), deltaQ()))
+    
+    pass 
+
 
 np.savetxt("Jacobian.csv", J(), delimiter=",")
 
