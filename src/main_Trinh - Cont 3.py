@@ -13,7 +13,7 @@ workbook = openpyxl.load_workbook('454 Data.xlsx')
 MVAbase = 100
 
 #Making each sheet of data (Line & Load data) more accessable
-lineData = workbook['LineData'] 
+lineData = workbook['Contingency Case 2 LineData'] 
 busData = workbook['BusData'] 
 
 #Initializing arrays to store Pload,Qload,V,Bus Type
@@ -399,7 +399,7 @@ if __name__ == '__main__':
         update(J(), mismatch, numBuses)
         ###################################################################
         
-    workbook = xlsxwriter.Workbook('Results Base Case.xlsx')
+    workbook = xlsxwriter.Workbook('Results Contingency Case 2.xlsx')
     worksheet1 = workbook.add_worksheet('busData')
     worksheet2 = workbook.add_worksheet('lineData')
     
