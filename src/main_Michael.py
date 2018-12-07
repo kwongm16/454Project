@@ -133,19 +133,50 @@ importLineData()
 
 #Mismatch equations
 deltaP = np.zeros(shape = numBuses - 1)
-deltaQ = np.zeros(shape = (numPQ), dtype = complex)
+deltaQ = np.zeros(shape = numPQ)
+Pcomp = np.zeros(shape = numBuses - 1)
+Qcomp = np.zeros(shape = numBuses - 1)
+#Qcomp = np.zeros(shape = numPQ)
+"""
 print(deltaP)
-
+print(Pload)
+print(theta)
+print(V)
+print(yBus)
+print("~~~~~~~~~~~~~~~~~~~~~~~~")
+"""
 def Pmismatch(numBuses):
     for k in range(0, numBuses-1):
-        for i in range(0, numBuses-1):
-            deltaP[k] += V[k + 1]*V[i + 1]*(np.real(yBus[k + 1][i + 1])*np.cos(theta[k + 1]-theta[i + 1]) + np.imag(yBus[k + 1][i + 1])*np.sin(theta[k + 1]-theta[i + 1])) 
-            if i == numBuses - 1: 
-                deltaP[k] -= Pload[k + 1]
+        for i in range(0, numBuses):
+            #print("i:", i)
+            #print("k", k)
+            Pcomp[k] += (V[k + 1]*V[i])*((np.real(yBus[k + 1][i])*np.cos(theta[k + 1]-theta[i])) + 
+                                          (np.imag(yBus[k + 1][i])*np.sin(theta[k + 1]-theta[i])))
+        
+        deltaP[k] = Pcomp[k] - (Pgen[k+1] - Pload[k+1])
+    return;
+Pmismatch(numBuses) 
+"""
+def Qcomp(numBuses):
+    for k in range (0, numBuses-1): 
+        for i in range(0, numBuses):
+            Qcomp[k] += V[k + 1]*V[i]*(np.real(yBus[k + 1][i])*np.sin(theta[k + 1]-theta[i]) - np.imag(yBus[k + 1][i])*np.cos(theta[k + 1]-theta[i]))
+                                                      
+    return;
+"""
+def Qmismatch(numPQ, numBuses):
+    for k in range (0, numPQ): 
+        for i in range(0, numBuses):
+            index = V_pqIndex[k]-1 
+            Qcomp[k] += V[index]*V[i] * (np.real(yBus[index][i])*np.sin(theta[index]-theta[i]) - 
+                                          np.imag(yBus[index][i])*np.cos(theta[index]-theta[i]))
+
+        deltaQ[k] = -Qcomp[k] - Qload[index] 
     return;
 
-Pmismatch(numBuses) 
-print(deltaP)
+Qmismatch(numPQ, numBuses)
+#print(deltaQ)
+
 
 #Consider creating a theta matrix, in which all values are initially 0
 #Consider modifying the V matrix, in which all zero values are 1
@@ -155,68 +186,102 @@ def J11(numBuses):
 
     for j in range(0,numBuses-1):
         for k in range (0,numBuses-1):
-            if(j==k): 
-                for N in range (0,numBuses-1): 
-                    Qk = V[j] * V[N] *(np.real(yBus[j+1][N])*np.sin(theta[j+1]-theta[N]) + np.imag(yBus[j+1][N])*np.cos(theta[j+1]-theta[N]))
-                
-                J11[j][k] =  (-1)*Qk - ((V[k+1])**2 * np.imag(yBus[j+1][k+1]))
-            
+            if j+1 == k+1: 
+                J11[j][k] = ((-1)*Qcomp[j])-(V[j+1]**2 * np.real(yBus[j+1][j+1]))
             else:
-                J11[j][k] = V[j+1] * V[k+1] *(np.real(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]))
+                J11[j][k] = V[j+1] * V[k+1] *(np.real(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]) - 
+                                              np.imag(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]))
     return J11
 
-print(J11(numBuses))
-print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
+#print(J11(numBuses))
+#print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 def J12(numBuses, numPQ):
+    
     J12 = np.zeros(shape = (numBuses-1, numPQ))
-    pqIdx = [2,3,4]
+
     for j in range(0,numBuses-1):
         for k in range (0,numPQ):
+            
+            index = V_pqIndex[k]-1
+            
+            if j+1 == k+1: 
+                J12[j][k] = (Pcomp[j]/V[j+1]) + (np.real(yBus[j+1][j+1])*V[j+1])
+            else: 
+                J12[j][k] = V[j+1] *(np.real(yBus[j+1][index])*np.cos(theta[j+1]-theta[index]) + 
+                                     np.imag(yBus[j+1][index])*np.sin(theta[j+1]-theta[index]))
+    return J12;
 
-            J12[j][k] = V[j+1] *(np.real(yBus[j+1][pqIdx[k]-1])*np.cos(theta[j+1]-theta[pqIdx[k]-1]) + np.imag(yBus[j+1][pqIdx[k]-1])*np.sin(theta[j+1]-theta[pqIdx[k]-1]))
-
-    return J12
-print(J12(numBuses, numPQ))
-print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+#print(J12(numBuses, numPQ))
+#print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 def J21(numBuses, numPQ):
     J21 = np.zeros(shape=(numPQ, numBuses-1))
     
     for j in range(0,numPQ): 
         for k in range(0,numBuses-1): 
-            
             index = V_pqIndex[j]-1
-            J21[j][k] = ((-1) * V[index] * V[k+1]) * ((np.real(yBus[index][k+1]) * np.cos(theta[index] - theta[k+1])) + (np.imag(yBus[index][k+1]) * np.sin(theta[index] - theta[k+1])))
+            if j+1 == k+1: 
+                J21[j][k] = Pcomp[j] - (np.real(yBus[j+1][j+1])*V[j+1]**2)
+            else: 
+                J21[j][k] = ((-1) * V[index] * V[k+1]) * ((np.real(yBus[index][k+1]) * np.cos(theta[index] - theta[k+1])) + 
+                                                          (np.imag(yBus[index][k+1]) * np.sin(theta[index] - theta[k+1])))
 
     return J21;
 
-#print(J21(numBuses, numPQ).shape)
-print(J21(numBuses, numPQ))
-print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+#print(J21(numBuses, numPQ))
+#print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
-def J22(numPQ):
+def J22():
     J22 = np.zeros(shape=(numPQ, numPQ))
     
     for j in range(0,numPQ): 
         for k in range(0,numPQ): 
             index = V_pqIndex[j]-1
-            J22[j][k] = V[index]*((np.real(yBus[index][k+1])*np.sin(theta[index]-theta[k+1])) - (np.imag(yBus[index][k+1])*np.cos(theta[index]-theta[k+1]))) 
+            
+            if j+1 == k+1: 
+                J22[j][j] = (Qcomp[j]/V[j+1])-(np.real(yBus[j+1][j+1])*V[j+1])
+            else:
+                J22[j][k] = V[index]*((np.real(yBus[index][k+1])*np.sin(theta[index]-theta[k+1])) -
+                                       (np.imag(yBus[index][k+1])*np.cos(theta[index]-theta[k+1]))) 
     
     return J22
-print(J22(numPQ))
 
-#print(J22(numBuses, numPQ).shape)
-#print(J21(numBuses, numPQ))
+def checkConverge(deltaP, deltaQ):
+    convergence = 1 
+    for p in range(0, len(deltaP)): 
+        if deltaP[p] > Pconv: 
+            return False;
+    if convergence == 1: 
+        for q in range(0, len(deltaQ)): 
+            if deltaQ[q] > Qconv: 
+                return False;
+        if convergence == 1: 
+            return True; 
+    return False;
 
-#print(J22(numBuses, numPQ))
+print(J22())
+print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
+print(Qcomp)
+def update(Vdiff, Thetadiff):
+    global V
+    global theta 
+    return;
+
+jacobian = np.full((18,18), 1)
+jacobian = np.linalg.inv(-jacobian)
+print(jacobian)  
 
 # a = J11(numBuses, numPQ)
 # np.savetxt("foo.csv", a, delimiter=",")
 
 # a = np.asarray(yBus)
 # np.savetxt("foo.csv", a, delimiter=",")
-
+#print(deltaP)
+#print(deltaQ)
+#print(V)
 """
 print(Pload)
 print(Qload)
