@@ -46,9 +46,10 @@ for row_index in range(1, (busData.max_row)):
 numBuses = 12
 yBus = np.zeros(shape=(numBuses, numBuses), dtype=complex)
 
+
 for row_index in range (0, (lineData.max_row - 1)): 
     
-    sendIndex = lineData.cell(row=row_index + 2, column=1).value
+    sendIndex = lineData.cell(row_index + 2, column=1).value
     receiveIndex = lineData.cell(row_index + 2, column=2).value
     
     rTotal = lineData.cell(row_index + 2, column=3).value
@@ -296,11 +297,37 @@ print("V")
 print(V)
 print(mismatch)
 
+result_Pgen = []
+result_Qgen = []
+for idx in range(0,numBuses):
 
-#Calculate mismatch = [deltaP deltaQ]
-#If mismatch is within limits, done abs(mismatch) < 0.1
-#Build Jacobian
-#corrections = -J[x0]^-1*Mismatch[x0]
-#update: [delta[x1], v[x1]] = [delta[x0] v[x0]] + corrections
 
-#repeat above steps until mismatches converge
+    if busType[idx] == "S" or busType[idx] == "PV":
+        result_Pgen.append("Bus" + str(idx+1) + ":" + str((Pcomp(idx)+Pload[idx])*MVAbase))
+        result_Qgen.append("Bus" + str(idx+1) + ":" + str((Qcomp(idx)+Qload[idx])*MVAbase))
+
+print(result_Pgen)
+print(result_Qgen)
+
+
+def pFlow(send,receive):
+    pFlow = (V[send]*V[receive])*(-1*yBus[send][receive])*np.sin(theta[send]-theta[receive])
+    return abs(pFlow)
+
+def qFlow(send,receive):
+    qFlow = (V[send]*V[receive])*(-1*yBus[send][receive])*np.cos(theta[send]-theta[receive])-((V[receive])**2*(-1*yBus[send][receive]))
+    
+    return abs(qFlow)
+
+
+for idx in range(0, (lineData.max_row - 1)):
+    send = lineData.cell(idx + 2, column=1).value
+    receive = lineData.cell(idx + 2, column=2).value
+    fMax = lineData.cell(idx + 2, column=6).value
+    print("send: " + str(send) + " receive: " + str(receive) + " real power: " + str(pFlow(send-1,receive-1)*MVAbase) + "[MW]")
+    print("send: " + str(send) + " receive: " + str(receive) + " reactive power: " + str(qFlow(send-1,receive-1)*MVAbase) + "[MW]")
+
+    if (pFlow(send-1,receive-1)*MVAbase > fMax) or (qFlow(send-1,receive-1)*MVAbase > fMax):
+        print("limit exceeded")
+    else:
+        print("within MVA limits")
