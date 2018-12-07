@@ -273,7 +273,9 @@ receiveInd = []
 realP = [] 
 reacP = [] 
 limit = []
+apparentP = []
 def RealandReacP():
+    import math
     for idx in range(0, (lineData.max_row - 1)):
         send = lineData.cell(idx + 2, column=1).value
         receive = lineData.cell(idx + 2, column=2).value
@@ -281,14 +283,28 @@ def RealandReacP():
         
         sendInd.append(send)
         receiveInd.append(receive)
-        realP.append(pFlow(send-1,receive-1)*MVAbase)
-        reacP.append(qFlow(send-1,receive-1)*MVAbase)
-    
-        if (pFlow(send-1,receive-1)*MVAbase > fMax) or (qFlow(send-1,receive-1)*MVAbase > fMax):
+        
+        P = pFlow(send-1,receive-1)*MVAbase
+        Q = qFlow(send-1,receive-1)*MVAbase
+        realP.append(P)
+        reacP.append(Q)
+        apparentP.append(math.sqrt(P**2 + Q**2))
+        
+        if (pFlow(send-1,receive-1)*MVAbase > fMax) or (qFlow(send-1,receive-1)*MVAbase > fMax) or (math.sqrt(P**2 + Q**2) > fMax):
             limit.append('Limit Exceeded')
         else:
             limit.append('Within MVA limit') 
     return;
+
+vLim = [] 
+def vLimit():
+    for idx in range(0, numBuses): 
+        if V[idx] < 0.95 or V[idx] > 1.05: 
+            vLim.append('Limit Exceeded')
+        else: 
+            vLim.append('Within V limit')
+    
+    return
 
 def WriteExcel1(col, param):
     row = 0
@@ -307,11 +323,15 @@ def WriteExcel2(col, param):
 def WriteBusData(numBuses, theta, V): 
     worksheet1.write(0,0,'Bus #')
     worksheet1.write(0,1,'Voltage (p.u.)')
-    worksheet1.write(0,2,'Angle (degrees)')
-    worksheet1.write(0,3,'Largest P Mismatch')
-    worksheet1.write(0,4,'Largest P Mismatch Bus')
-    worksheet1.write(0,5,'Largest Q Mismatch')
-    worksheet1.write(0,6,'Largest Q Mismatch Bus')
+    worksheet1.write(0,2,'Voltage Limit')
+    worksheet1.write(0,3,'Angle (degrees)')
+    worksheet1.write(0,4,'Largest P Mismatch')
+    worksheet1.write(0,5,'Largest P Mismatch Bus')
+    worksheet1.write(0,6,'Largest Q Mismatch')
+    worksheet1.write(0,7,'Largest Q Mismatch Bus')
+    
+    vLimit()
+    WriteExcel1(2, vLim)
     
     row = 0
     for ind in range(0, numBuses):
@@ -320,7 +340,7 @@ def WriteBusData(numBuses, theta, V):
         
     row = 0  
     for angle in (theta): 
-        worksheet1.write(row+1, 2, angle * 57.2958)
+        worksheet1.write(row+1, 3, angle * 57.2958)
         row += 1
         
     WriteExcel1(1, V)
@@ -339,7 +359,8 @@ def WriteLineData():
     worksheet2.write(0,4,'Receiving Bus')
     worksheet2.write(0,5,'Real Power (MW)')
     worksheet2.write(0,6,'Reactive Power (MVAr)')
-    worksheet2.write(0,7,'Limit Warning MVAr')
+    worksheet2.write(0,7,'Apparent Power (MVA)')
+    worksheet2.write(0,8,'Limit Warning MVAr')
     
     PandGresults(numBuses)
     RealandReacP()
@@ -350,7 +371,8 @@ def WriteLineData():
     WriteExcel2(4, receiveInd)
     WriteExcel2(5, realP)
     WriteExcel2(6, reacP)
-    WriteExcel2(7, limit)
+    WriteExcel2(7, apparentP)
+    WriteExcel2(8, limit)
     return;
 
 if __name__ == '__main__':
