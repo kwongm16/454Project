@@ -65,8 +65,9 @@ for row_index in range (0, (lineData.max_row - 1)):
     yBus[sendIndex - 1, sendIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
     yBus[receiveIndex - 1, receiveIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
 
+print(yBus)
 a = np.asarray(yBus)
-np.savetxt("yBus.csv", a, delimiter=",")
+np.savetxt("foo.csv", a, delimiter=",")
 
 # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
@@ -78,21 +79,14 @@ Qconv = 0.1
 numPV = 0
 numPQ = 0
 #Injections have all known P injections first followed by known Q injections
-Pinj = []
-Qinj = []
 
 #Count how many PQ and PV buses in system
 for idx in range(0,len(busType)):
     if busType[idx] == "PV":
         numPV += 1
-        Pinj.append(Pgen[idx] - Pload[idx])
+
     elif busType[idx] == "PQ":
         numPQ += 1
-        Pinj.append(Pgen[idx] - Pload[idx])
-
-for idx in range(0,len(busType)):
-    if busType[idx] == "PQ":
-        Qinj.append(-1*Qload[idx])
 
 
 #fill unknown V's with flat start guesses
@@ -105,96 +99,128 @@ theta = np.zeros(numBuses)
 
 
 #Function to identify indexes of PQ buses
-def pqIdx(numPQ):
+def pqIdx():
     pqIdx = []
     for idx in range(0, numBuses):
         if busType[idx] =="PQ":
             pqIdx.append(idx+1)
     return pqIdx
 
-pqIdx = pqIdx(numPQ)
+pqIdx = pqIdx()
+print(pqIdx)
 
+#Function for P computed
+def Pcomp(j):
+    Pcomp = 0
+    for k in range(0, numBuses):
+        Pcomp += V[j] * V[k] * (np.real(yBus[j][k])*np.cos(theta[j]-theta[k]) + np.imag(yBus[j][k])*np.sin(theta[j]-theta[k]))
+    return Pcomp
 
+#Function for Q computed
+def Qcomp(i):
+    Qcomp = 0
+    for k in range(0, numBuses):
+        Qcomp += V[i] * V[k] * (np.real(yBus[i][k])*np.sin(theta[i]-theta[k]) - np.imag(yBus[i][k])*np.cos(theta[i]-theta[k]))
+    return Qcomp
 
-def deltaP(numBuses):
+#Function for P mismatch
+def deltaP():
     deltaP = np.zeros(numBuses-1)
-
     for j in range(0, numBuses - 1):
-
-        for k in range(0, numBuses):
-
-            deltaP[j] += V[j+1] * V[k] * (np.real(yBus[j+1][k])*np.cos(theta[j+1]-theta[k]) + np.imag(yBus[j+1][k])*np.sin(theta[j+1]-theta[k]))
-
-        deltaP[j] = (Pgen[j+1]-Pload[j+1]) - deltaP[j]
+        deltaP[j] = (Pgen[j+1]-Pload[j+1]) - Pcomp(j+1)
     return deltaP
 
-def deltaQ(numPQ):
+#Function for Q mismatch
+def deltaQ():
     deltaQ = np.zeros(numPQ)
     for j in range(0, numPQ):
-        for k in range(0, numBuses):
-
-            deltaQ[j] += V[pqIdx[j]-1] * V[k] * (np.real(yBus[pqIdx[j]-1][k])*np.sin(theta[pqIdx[j]-1]-theta[k]) - np.imag(yBus[pqIdx[j]-1][k])*np.cos(theta[pqIdx[j]-1]-theta[k]))
-
-        deltaQ[j] = (-1*Qload[pqIdx[j]-1]) - deltaQ[j]
+        deltaQ[j] = (-1*Qload[pqIdx[j]-1]) - Qcomp(pqIdx[j]-1)
     return deltaQ
 
 
-b = np.asarray(deltaP(numBuses))
-np.savetxt("deltaP.csv", b, delimiter=",")
-
-c = np.asarray(deltaQ(numPQ))
-np.savetxt("deltaQ.csv", c, delimiter=",")
-
 #Define Jacobian submatrices
-def J11(numBuses):
+def J11():
     J11 = np.zeros(shape = (numBuses-1, numBuses-1))
 
     for j in range(0,numBuses-1):
         for k in range(0,numBuses-1):
-            
-            if (k+1) == (j+1):
-                for l in range(0,numBuses):
-                    J11[j][k] += V[j+1] * V[l] *(-1*np.real(yBus[j+1][l])*np.sin(theta[j+1]-theta[l]) + np.imag(yBus[j+1][l])*np.cos(theta[j+1]-theta[l]))
-                J11[j][k] += -1*V[j+1]**2*np.imag(yBus[j+1][j+1])
+            if (k) == (j):
+                J11[j][k] = -1*Qcomp(j+1) -1*V[j+1]**2*np.imag(yBus[j+1][j+1])
             else:
                 J11[j][k] = V[j+1] * V[k+1] *(np.real(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]))
-
     return J11
 
-def J12(numBuses, numPQ):
+
+def J12():
     J12 = np.zeros(shape = (numBuses-1, numPQ))
 
     for j in range(0,numBuses-1):
         for k in range (0,numPQ):
-
-            J12[j][k] = V[j+1] *(np.real(yBus[j+1][pqIdx[k]-1])*np.cos(theta[j+1]-theta[pqIdx[k]-1]) + np.imag(yBus[j+1][pqIdx[k]-1])*np.sin(theta[j+1]-theta[pqIdx[k]-1]))
-
+            kprime = pqIdx[k]
+            if (kprime-1) == (j+1):
+                J12[j][k] = Pcomp(j+1)/V[j+1] + V[j+1]*np.real(yBus[j+1][j+1])
+            else:
+                J12[j][k] = V[j+1] *(np.real(yBus[j+1][kprime-1])*np.cos(theta[j+1]-theta[kprime-1]) + np.imag(yBus[j+1][kprime-1])*np.sin(theta[j+1]-theta[kprime-1]))
     return J12
 
-def J21(numBuses, numPQ):
-    J21 = np.zeros(shape = (numPQ, numBuses - 1))
-    pqIdx = [2,3,4]
-
-
-
+def J21():
+    J21 = np.zeros(shape=(numPQ, numBuses-1))
+    
     for j in range(0,numPQ):
-        for k in range (0,numBuses - 1):
-
-            J21[j][k] = V[pqIdx[j]]*V[k] *(np.real(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]) + np.imag(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]))
+        kprime = pqIdx[j] 
+        for k in range(0,numBuses-1): 
+            if kprime-1 == k+1: 
+                J21[j][k] = Pcomp(kprime-1) - (np.real(yBus[kprime-1][kprime-1])*V[kprime-1]**2)
+            else: 
+                J21[j][k] = ((-1) * V[kprime-1] * V[k+1]) * ((np.real(yBus[kprime-1][k+1]) * np.cos(theta[kprime-1] - theta[k+1])) + 
+                                                          (np.imag(yBus[kprime-1][k+1]) * np.sin(theta[kprime-1] - theta[k+1])))
 
     return J21
 
-#print(J11(5))
+def J22():
+    J22 = np.zeros(shape=(numPQ, numPQ))
+    
+    for j in range(0,numPQ): 
+        kprime1 = pqIdx[j]
+        for k in range(0,numPQ): 
+            kprime2 = pqIdx[k]
+            if kprime1-1 == kprime2-1: 
+                J22[j][k] = (Qcomp(kprime1-1)/V[kprime1-1])-(np.imag(yBus[kprime1-1][kprime1-1])*V[kprime1-1])
+            else:
+                J22[j][k] = V[kprime1-1]*((np.real(yBus[kprime1-1][kprime2-1])*np.sin(theta[kprime1-1]-theta[kprime2-1])) -
+                                       (np.imag(yBus[kprime1-1][kprime2-1])*np.cos(theta[kprime1-1]-theta[kprime2-1]))) 
+    return J22
 
-d = np.asarray(J11(numBuses))
-np.savetxt("J11.csv", d, delimiter=",")
 
-def J(J11,J12,J21,J22):
-    J1 = np.vstack((J11,J21))
-    J2 = np.vstack((J12,J22))
+
+def J():
+    J1 = np.vstack((J11(),J21()))
+    J2 = np.vstack((J12(),J22()))
     J = np.hstack((J1,J2))
 
     return J
+
+print(J())
+np.savetxt("Jacobian.csv", J(), delimiter=",")
+
+b = np.asarray(deltaP())
+np.savetxt("deltaP.csv", b, delimiter=",")
+
+c = np.asarray(deltaQ())
+np.savetxt("deltaQ.csv", c, delimiter=",")
+
+d = np.asarray(J11())
+np.savetxt("J11.csv", d, delimiter=",")
+
+e = np.asarray(J12())
+np.savetxt("J12.csv", e, delimiter=",")
+
+f = np.asarray(J21())
+np.savetxt("J21.csv", f, delimiter=",")
+
+g = np.asarray(J22())
+np.savetxt("J22.csv", g, delimiter=",")
+
 
 #Calculate mismatch = [deltaP deltaQ]
 #If mismatch is within limits, done abs(mismatch) < 0.1
