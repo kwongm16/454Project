@@ -65,9 +65,8 @@ for row_index in range (0, (lineData.max_row - 1)):
     yBus[sendIndex - 1, sendIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
     yBus[receiveIndex - 1, receiveIndex - 1] += (1 / seriesImpedance) + (1j * bTotal / 2)
 
-# print(yBus)
-# a = np.asarray(yBus)
-# np.savetxt("foo.csv", a, delimiter=",")
+a = np.asarray(yBus)
+np.savetxt("yBus.csv", a, delimiter=",")
 
 # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
@@ -79,20 +78,22 @@ Qconv = 0.1
 numPV = 0
 numPQ = 0
 #Injections have all known P injections first followed by known Q injections
-inj = []
+Pinj = []
+Qinj = []
 
 #Count how many PQ and PV buses in system
 for idx in range(0,len(busType)):
     if busType[idx] == "PV":
         numPV += 1
-        inj.append(Pgen[idx] - Pload[idx])
+        Pinj.append(Pgen[idx] - Pload[idx])
     elif busType[idx] == "PQ":
         numPQ += 1
-        inj.append(Pgen[idx] - Pload[idx])
+        Pinj.append(Pgen[idx] - Pload[idx])
 
 for idx in range(0,len(busType)):
     if busType[idx] == "PQ":
-        inj.append(-1*Qload[idx])
+        Qinj.append(-1*Qload[idx])
+
 
 #fill unknown V's with flat start guesses
 for idx in range(0, numBuses):
@@ -102,39 +103,67 @@ for idx in range(0, numBuses):
 #intialize a theta array with knowns and flat start guesses
 theta = np.zeros(numBuses)
 
-#Mismatch equations
-# deltaP = np.zeros(shape = (numBuses - 1), dtype = complex)
+
+#Function to identify indexes of PQ buses
+def pqIdx(numPQ):
+    pqIdx = []
+    for idx in range(0, numBuses):
+        if busType[idx] =="PQ":
+            pqIdx.append(idx+1)
+    return pqIdx
+
+pqIdx = pqIdx(numPQ)
+
+
 
 def deltaP(numBuses):
     deltaP = np.zeros(numBuses-1)
 
     for j in range(0, numBuses - 1):
 
-        for k in range(0, numBuses - 1):
+        for k in range(0, numBuses):
 
-            deltaP[j] += V[j+1] * V[k+1] * (np.real(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]))
+            deltaP[j] += V[j+1] * V[k] * (np.real(yBus[j+1][k])*np.cos(theta[j+1]-theta[k]) + np.imag(yBus[j+1][k])*np.sin(theta[j+1]-theta[k]))
 
-        deltaP[j] += inj[j+1]
-
+        deltaP[j] = (Pgen[j+1]-Pload[j+1]) - deltaP[j]
     return deltaP
-print(deltaP(numBuses))
 
-deltaQ = np.zeros(shape = (numPQ), dtype = complex)
+def deltaQ(numPQ):
+    deltaQ = np.zeros(numPQ)
+    for j in range(0, numPQ):
+        for k in range(0, numBuses):
+
+            deltaQ[j] += V[pqIdx[j]-1] * V[k] * (np.real(yBus[pqIdx[j]-1][k])*np.sin(theta[pqIdx[j]-1]-theta[k]) - np.imag(yBus[pqIdx[j]-1][k])*np.cos(theta[pqIdx[j]-1]-theta[k]))
+
+        deltaQ[j] = (-1*Qload[pqIdx[j]-1]) - deltaQ[j]
+    return deltaQ
+
+
+b = np.asarray(deltaP(numBuses))
+np.savetxt("deltaP.csv", b, delimiter=",")
+
+c = np.asarray(deltaQ(numPQ))
+np.savetxt("deltaQ.csv", c, delimiter=",")
 
 #Define Jacobian submatrices
 def J11(numBuses):
     J11 = np.zeros(shape = (numBuses-1, numBuses-1))
 
     for j in range(0,numBuses-1):
-        for k in range (0,numBuses-1):
-
-            J11[j][k] = V[j+1] * V[k+1] *(np.real(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]))
+        for k in range(0,numBuses-1):
+            
+            if (k+1) == (j+1):
+                for l in range(0,numBuses):
+                    J11[j][k] += V[j+1] * V[l] *(-1*np.real(yBus[j+1][l])*np.sin(theta[j+1]-theta[l]) + np.imag(yBus[j+1][l])*np.cos(theta[j+1]-theta[l]))
+                J11[j][k] += -1*V[j+1]**2*np.imag(yBus[j+1][j+1])
+            else:
+                J11[j][k] = V[j+1] * V[k+1] *(np.real(yBus[j+1][k+1])*np.sin(theta[j+1]-theta[k+1]) - np.imag(yBus[j+1][k+1])*np.cos(theta[j+1]-theta[k+1]))
 
     return J11
 
 def J12(numBuses, numPQ):
     J12 = np.zeros(shape = (numBuses-1, numPQ))
-    pqIdx = [4,5,6,7,8,9,11]
+
     for j in range(0,numBuses-1):
         for k in range (0,numPQ):
 
@@ -144,7 +173,7 @@ def J12(numBuses, numPQ):
 
 def J21(numBuses, numPQ):
     J21 = np.zeros(shape = (numPQ, numBuses - 1))
-    pqIdx = [4,5,6,7,8,9,11]
+    pqIdx = [2,3,4]
 
 
 
@@ -155,7 +184,22 @@ def J21(numBuses, numPQ):
 
     return J21
 
-print(J12(12,7))
+#print(J11(5))
 
-a = np.asarray(J12(12,7))
-np.savetxt("foo.csv", a, delimiter=",")
+d = np.asarray(J11(numBuses))
+np.savetxt("J11.csv", d, delimiter=",")
+
+def J(J11,J12,J21,J22):
+    J1 = np.vstack((J11,J21))
+    J2 = np.vstack((J12,J22))
+    J = np.hstack((J1,J2))
+
+    return J
+
+#Calculate mismatch = [deltaP deltaQ]
+#If mismatch is within limits, done abs(mismatch) < 0.1
+#Build Jacobian
+#corrections = -J[x0]^-1*Mismatch[x0]
+#update: [delta[x1], v[x1]] = [delta[x0] v[x0]] + corrections
+
+#repeat above steps until mismatches converge
