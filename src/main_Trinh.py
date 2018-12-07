@@ -1,14 +1,15 @@
 '''
 Created on Nov 24, 2018
-
 @author: micha and trinh
 '''
 #Importing packages used
 import openpyxl
 import numpy as np
+import math
+import cmath
 
 #Importing data from "Line_Data.xlsx" excel document
-workbook = openpyxl.load_workbook('454 Data Project.xlsx') 
+workbook = openpyxl.load_workbook('454 Data.xlsx') 
 
 MVAbase = 100
 
@@ -95,7 +96,6 @@ for idx in range(0, numBuses):
 #intialize a theta array with knowns and flat start guesses
 theta = np.zeros(numBuses)
 
-
 #Function to identify indexes of PQ buses
 def pqIdx():
     pqIdx = []
@@ -105,6 +105,7 @@ def pqIdx():
     return pqIdx
 
 pqIdx = pqIdx()
+
 
 #Function for P computed
 def Pcomp(j):
@@ -124,14 +125,14 @@ def Qcomp(i):
 def deltaP():
     deltaP = np.zeros(numBuses-1)
     for j in range(0, numBuses - 1):
-        deltaP[j] = (Pgen[j+1]-Pload[j+1]) - Pcomp(j+1)
+        deltaP[j] = Pcomp(j+1) - (Pgen[j+1]-Pload[j+1])
     return deltaP
 
 #Function for Q mismatch
 def deltaQ():
     deltaQ = np.zeros(numPQ)
     for j in range(0, numPQ):
-        deltaQ[j] = (-1*Qload[pqIdx[j]-1]) - Qcomp(pqIdx[j]-1)
+        deltaQ[j] = (Qcomp(pqIdx[j]-1) - (-1*Qload[pqIdx[j]-1]))
     return deltaQ
 
 
@@ -195,88 +196,105 @@ def J():
 
     return J
 
-def checkConverge(deltaP, deltaQ):
-    for p in range(0, len(deltaP)): 
-        if deltaP[p] > Pconv: 
-            print(p)
-            return False;
-    for q in range(0, len(deltaQ)): 
-        if deltaQ[q] > Qconv: 
-            return False;
-    return True;
+
+print("~~~~~~~~~~~~~~~~~~~~~~~")
+
 
 def calcCorrection(jacobian, mismatch):
     invJacobian = np.linalg.inv(jacobian)
-    correction = np.matmul(-invJacobian, mismatch)
-    return correction;
+    correction = np.matmul(-1*invJacobian, mismatch)
+    return correction
 
 
-def update(correction, numPQ):
-    global V
-    global theta 
-    
-    for thetaInd in range(0, len(correction) - numPQ): 
-        theta[thetaInd+1] += correction[thetaInd][0]
-    
-    for vInd in range(0, numPQ):
-        kprime = pqIdx[vInd]-1 
-        V[kprime] += correction[len(theta)-1+vInd][0]
-    return;
 
-if __name__ == '__main__': 
-    jacobian = J()
-    
-    P = deltaP()
-    Q = deltaQ()
-    
-    dP = P.reshape(len(P),1)
-    dQ = Q.reshape(len(Q),1)
-    
-    mismatch = np.vstack((dP,dQ))
-    
-    correction = calcCorrection(jacobian, mismatch)
-    
-    #print("correction:", correction)
-    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print("dP", deltaP())
-    print("dQ", deltaQ())
-    #print("V:", V)
-    #print("theta:", theta)
-    #print("V length:", len(V))
-    #print("theta length:", len(theta))
-    #print("correction length:", len(correction))
-    update(correction, numPQ)
-    #print("numPQ", numPQ)
-    #print("correction - numPQ", len(correction)-numPQ)
-    #print("newV:", V)
-    #print("newtheta", theta)
-    print("newdP", deltaP())
-    print("newdQ", deltaQ())
-    print(checkConverge(deltaP(), deltaQ()))
-    
-    pass 
+##################################################
+P = deltaP()
+Q = deltaQ()
+dP = P.reshape(len(P),1)
+dQ = Q.reshape(len(Q),1)
+mismatch = np.vstack((dP,dQ))
+jacobian = J()
+correction = calcCorrection(jacobian,mismatch)
 
+#Update
+for idx in range(0,(numBuses-1)):
+    theta[idx+1] += calcCorrection(jacobian, mismatch)[idx]
 
-np.savetxt("Jacobian.csv", J(), delimiter=",")
+for idx in range(0,(numPQ)):
+    kprime = pqIdx[idx]
+    V[kprime-1] += calcCorrection(jacobian, mismatch)[numBuses-1+ idx]
+print("1")
+print("theta")
+print(theta)
+print("V")
+print(V)
+print(mismatch)
+#########################################3
+P = deltaP()
+Q = deltaQ()
+dP = P.reshape(len(P),1)
+dQ = Q.reshape(len(Q),1)
+mismatch = np.vstack((dP,dQ))
+jacobian = J()
+correction = calcCorrection(jacobian,mismatch)
 
-b = np.asarray(deltaP())
-np.savetxt("deltaP.csv", b, delimiter=",")
+#Update
+for idx in range(0,(numBuses-1)):
+    theta[idx+1] = theta[idx+1] + calcCorrection(jacobian, mismatch)[idx]
 
-c = np.asarray(deltaQ())
-np.savetxt("deltaQ.csv", c, delimiter=",")
+for idx in range(0,(numPQ)):
+    kprime = pqIdx[idx]
+    V[kprime-1] += calcCorrection(jacobian, mismatch)[numBuses-1+ idx]
+print("2")
+print("theta")
+print(theta)
+print("V")
+print(V)
+print(mismatch)
+#########################################3
+P = deltaP()
+Q = deltaQ()
+dP = P.reshape(len(P),1)
+dQ = Q.reshape(len(Q),1)
+mismatch = np.vstack((dP,dQ))
+jacobian = J()
+correction = calcCorrection(jacobian,mismatch)
 
-d = np.asarray(J11())
-np.savetxt("J11.csv", d, delimiter=",")
+#Update
+for idx in range(0,(numBuses-1)):
+    theta[idx+1] = theta[idx+1] + calcCorrection(jacobian, mismatch)[idx]
 
-e = np.asarray(J12())
-np.savetxt("J12.csv", e, delimiter=",")
+for idx in range(0,(numPQ)):
+    kprime = pqIdx[idx]
+    V[kprime-1] += calcCorrection(jacobian, mismatch)[numBuses-1+ idx]
+print("3")
+print("theta")
+print(theta)
+print("V")
+print(V)
+print(mismatch)
+#########################################3
+P = deltaP()
+Q = deltaQ()
+dP = P.reshape(len(P),1)
+dQ = Q.reshape(len(Q),1)
+mismatch = np.vstack((dP,dQ))
+jacobian = J()
+correction = calcCorrection(jacobian,mismatch)
 
-f = np.asarray(J21())
-np.savetxt("J21.csv", f, delimiter=",")
+#Update
+for idx in range(0,(numBuses-1)):
+    theta[idx+1] = theta[idx+1] + calcCorrection(jacobian, mismatch)[idx]
 
-g = np.asarray(J22())
-np.savetxt("J22.csv", g, delimiter=",")
-
+for idx in range(0,(numPQ)):
+    kprime = pqIdx[idx]
+    V[kprime-1] += calcCorrection(jacobian, mismatch)[numBuses-1+ idx]
+print("4")
+print("theta")
+print(theta)
+print("V")
+print(V)
+print(mismatch)
 
 
 #Calculate mismatch = [deltaP deltaQ]
